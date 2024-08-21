@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <h1>PET Traceability Home</h1>
+    
+    <!-- Add New PET フォーム -->
+    <h2>Add New PET</h2>
+    <form action="{{ url_for('add_pet') }}" method="POST">
+        <label for="weight">Weight:</label>
+        <input type="text" id="weight" name="weight" required><br><br>
+        <label for="location">Location:</label>
+        <input type="text" id="location" name="location" required><br><br>
+        <button type="submit">Add PET</button>
+    </form>
+
+    <br><br>
+    <a href="{{ url_for('add_trace', trace_type='recycler') }}">Add Recycler Trace</a><br>
+    <a href="{{ url_for('add_trace', trace_type='spinning') }}">Add Spinning Trace</a><br>
+    <a href="{{ url_for('add_trace', trace_type='manufacturing') }}">Add Manufacturing Trace</a><br><br>
+    
+    {% if message %}
+        <p>{{ message }}</p>
+    {% endif %}
+    
+    <h2>Current PETs</h2>
+    <ul>
+        {% for pet_id, pet in pets.items() %}
+            <li>
+                <strong>PET ID:</strong> {{ pet_id }}<br>
+                <strong>Weight:</strong> {{ pet.weight }}<br>
+                <strong>Initial Location:</strong> {{ pet.initial_location }}<br>
+                <strong>Creation Date:</strong> {{ pet.creation_timestamp }}<br>
+                <a href="{{ url_for('trace_log', pet_id=pet_id) }}">View Trace Log</a>
+            </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Spinning Trace</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <h1>Add Spinning Trace</h1>
+
+    <form action="{{ url_for('add_trace', trace_type='spinning') }}" method="POST">
+        <label for="pet_id">PET ID:</label>
+        <select id="pet_id" name="pet_id" required>
+            {% for pet_id in pet_ids %}
+                <option value="{{ pet_id }}">{{ pet_id }}</option>
+            {% endfor %}
+        </select><br><br>
+        <label for="location">Location:</label>
+        <input type="text" id="location" name="location" required><br><br>
+        <label for="status">Status:</label>
+        <select id="status" name="status" required>
+            <option value="入荷">入荷</option>
+            <option value="処理中">処理中</option>
+            <option value="出荷">出荷</option>
+        </select><br><br>
+        <button type="submit">Add Trace</button>
+    </form>
+
+    <a href="{{ url_for('index') }}">Back to Home</a>
+</body>
+</html>

@@ -1,0 +1,58 @@
+/* ベースのスタイル */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f8ff; /* 淡い青色の背景 */
+    color: #333; /* ダークグレーのテキスト */
+    margin: 0;
+    padding: 0;
+}
+
+h1 {
+    color: #003366; /* ダークブルー */
+}
+
+form {
+    background-color: #e6f2ff; /* 淡い青の背景 */
+    border: 1px solid #b3d9ff; /* 薄い青のボーダー */
+    border-radius: 8px;
+    padding: 10px;
+    margin: 10px;
+    width: 300px;
+}
+
+label {
+    display: block;
+    margin: 10px 0 5px;
+}
+
+input, select {
+    padding: 5px;
+    border: 1px solid #b3d9ff; /* 薄い青のボーダー */
+    border-radius: 4px;
+    width: 200px;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+}
+
+button {
+    background-color: #003366; /* ダークブルー */
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+button:hover {
+    background-color: #002244; /* より暗い青 */
+}
+
+a {
+    color: #003366; /* ダークブルー */
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
