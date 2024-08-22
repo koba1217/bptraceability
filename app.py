@@ -1,9 +1,20 @@
-from flask import Flask, request, render_template
+from flask import Flask, render_template, request, redirect, url_for, session
 import datetime
 import hashlib
 
 # Flask アプリの作成
 app = Flask(__name__)
+app.secret_key = 'your_secret_key_here'  # シークレットキーを設定
+
+# ハードコードされたユーザー情報
+users = {
+    "user1": "pass",
+    "user2": "pass",
+    "リサイクラー1": "pass",
+    "紡績1": "pass",
+    "製品化1": "pass"
+}
+
 
 # トレーサビリティ機能
 class Traceability:
@@ -79,7 +90,7 @@ def add_pet():
     weight = request.form['weight']
     location = request.form['location']
     pet_id = manager.add_pet(weight, location)
-    return render_template('index.html', pets=manager.pets, message=f"New PET added with ID {pet_id}")
+    return render_template('index.html', pets=manager.pets, message=f"{pet_id}が投函されました。")
 
 @app.route('/add_trace/<trace_type>', methods=['GET', 'POST'])
 def add_trace(trace_type):
@@ -88,7 +99,15 @@ def add_trace(trace_type):
         location = request.form['location']
         status = request.form['status']
         manager.add_trace_to_pet(pet_id, location, status, trace_type)
-        return index()
+        if 'username' in session:
+            username = session['username']
+            if username == 'リサイクラー1' and trace_type == 'recycler':
+                return redirect(url_for('add_trace', trace_type='recycler'))
+            elif username == '紡績1' and trace_type == 'spinning':
+                return redirect(url_for('add_trace', trace_type='spinning'))
+            elif username == '製品化1' and trace_type == 'manufacturing':
+                return redirect(url_for('add_trace', trace_type='manufacturing'))
+        return redirect(url_for('index'))  # その他のユーザーやエラー時はホーム画面にリダイレクト
     else:
         if trace_type == 'recycler':
             pet_ids = list(manager.pets.keys())
@@ -98,12 +117,51 @@ def add_trace(trace_type):
             pet_ids = manager.get_pet_ids_by_trace_type('spinning', '出荷')
         return render_template(f'add_trace_{trace_type}.html', pet_ids=pet_ids)
 
+    return render_template(f'add_trace_{trace_type}.html')
+
 @app.route('/trace_log/<pet_id>')
 def trace_log(pet_id):
     trace_data = manager.get_trace_log_for_pet(pet_id)
     if trace_data:
         return render_template('trace_log.html', pet_id=pet_id, weight=trace_data['weight'], initial_location=trace_data['initial_location'], trace_log=trace_data['trace_log'])
     return render_template('trace_log.html', pet_id=pet_id, message="No trace log found for this PET.")
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        # 認証の確認
+        if username in users and users[username] == password:
+            session['username'] = username  # セッションにユーザー名を保存
+
+            # ユーザー名に応じてリダイレクト先を変更
+            if username == 'リサイクラー1':
+                return redirect(url_for('add_trace', trace_type='recycler'))
+            elif username == '紡績1':
+                return redirect(url_for('add_trace', trace_type='spinning'))
+            elif username == '製品化1':
+                return redirect(url_for('add_trace', trace_type='manufacturing'))
+            else:
+                return redirect(url_for('index'))
+
+        else:
+            return "Invalid credentials. Please try again."
+
+    return render_template('login.html')
+
+
+@app.route('/logout')
+def logout():
+    session.pop('username', None)  # セッションからユーザー名を削除
+    return redirect(url_for('login'))
+
+@app.before_request
+def require_login():
+    allowed_routes = ['login']
+    if 'username' not in session and request.endpoint not in allowed_routes:
+        return redirect(url_for('login'))
 
 if __name__ == '__main__':
     app.run(debug=True)

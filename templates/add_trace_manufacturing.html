@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <h1>Add Manufacturing Trace</h1>
+    <h1>製品化業者画面</h1>
 
     <form action="{{ url_for('add_trace', trace_type='manufacturing') }}" method="POST">
         <label for="pet_id">PET ID:</label>
@@ -18,17 +18,18 @@
                 <option value="{{ pet_id }}">{{ pet_id }}</option>
             {% endfor %}
         </select><br><br>
-        <label for="location">Location:</label>
+        <label for="location">会社:</label>
         <input type="text" id="location" name="location" required><br><br>
-        <label for="status">Status:</label>
+        <label for="status">ステータス:</label>
         <select id="status" name="status" required>
             <option value="入荷">入荷</option>
             <option value="処理中">処理中</option>
             <option value="出荷">出荷</option>
         </select><br><br>
-        <button type="submit">Add Trace</button>
+        <button type="submit">入力</button>
     </form>
 
-    <a href="{{ url_for('index') }}">Back to Home</a>
+    <!-- <a href="{{ url_for('index') }}">Back to Home</a> -->
+    <br><br><a href="{{ url_for('logout') }}">Logout</a>
 </body>
 </html>

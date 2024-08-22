@@ -18,9 +18,9 @@
         <ul>
             {% for trace in trace_log %}
                 <li>
-                    <strong>Timestamp:</strong> {{ trace.timestamp }}<br>
-                    <strong>Location:</strong> {{ trace.location }}<br>
-                    <strong>Status:</strong> {{ trace.status }}<br>
+                    <strong>日付:</strong> {{ trace.timestamp }}<br>
+                    <strong>会社:</strong> {{ trace.location }}<br>
+                    <strong>ステータス:</strong> {{ trace.status }}<br>
                     <strong>Type:</strong> {{ trace.trace_type }}
                 </li>
             {% endfor %}
