@@ -20,6 +20,15 @@ form {
     width: 300px;
 }
 
+li {
+    background-color: #ffffff; /* 白の背景 */
+    border: 1px solid #b3d9ff; /* 薄い青のボーダー */
+    border-radius: 8px;
+    padding: 10px;
+    margin: 10px;
+    width: 300px;
+}
+
 label {
     display: block;
     margin: 10px 0 5px;
