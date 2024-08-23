@@ -18,7 +18,7 @@
     <!-- Add New PET フォーム -->
     <h2>ペットボトルの投函数を入力してください</h2>
     <form action="{{ url_for('add_pet') }}" method="POST">
-        <label for="weight">重量:</label>
+        <label for="weight">本数:</label>
         <input type="text" id="weight" name="weight" required><br><br>
         <label for="location">場所:</label>
         <input type="text" id="location" name="location" required><br><br>
@@ -36,14 +36,14 @@
     
     <h2>リサイクル履歴</h2>
     <ul>
-        {% for pet_id, pet in pets.items() %}
-            <li>
-                <strong>PET ID:</strong> {{ pet_id }}<br>
-                <strong>重量:</strong> {{ pet.weight }}<br>
-                <strong>投函場所:</strong> {{ pet.initial_location }}<br>
-                <strong>日付:</strong> {{ pet.creation_timestamp }}<br>
-                <a href="{{ url_for('trace_log', pet_id=pet_id) }}">View Trace Log</a>
-            </li>
+        {% for pet in pets %}
+        <li>
+            <strong>ID:</strong> {{ pet['pet_id'] }}<br>
+            <strong>本数:</strong> {{ pet['weight'] }}<br>
+            <strong>投函場所:</strong> {{ pet['location'] }}<br>
+            <strong>日時:</strong> {{ pet['timestamp'] }}<br>
+            <a href="{{ url_for('trace_log', pet_id=pet['pet_id'] ) }}">リサイクル履歴の詳細を見る</a>
+        </li>
         {% endfor %}
     </ul>
     <br><br><a href="{{ url_for('logout') }}">Logout</a>

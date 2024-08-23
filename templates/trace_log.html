@@ -9,12 +9,12 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <h1>Trace Log for PET {{ pet_id }}</h1>
+    <h1> リサイクル履歴詳細</h1>
     
     {% if weight %}
-        <p><strong>Weight:</strong> {{ weight }}</p>
-        <p><strong>Initial Location:</strong> {{ initial_location }}</p>
-        <h2>Trace Log</h2>
+        <p><strong>重量:</strong> {{ weight }}</p>
+        <p><strong>投函場所:</strong> {{ initial_location }}</p>
+        <h2> PET ID {{ pet_id }} のトレースログ</h2>
         <ul>
             {% for trace in trace_log %}
                 <li>

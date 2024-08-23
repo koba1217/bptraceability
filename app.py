@@ -15,6 +15,14 @@ users = {
     "製品化1": "pass"
 }
 
+# ユーザーごとのPETデータを保持する
+user_pets = {
+    'user1': [],
+    'user2': [],
+    'リサイクラー1': [],
+    '紡績1': [],
+    '製品化1': []
+}
 
 # トレーサビリティ機能
 class Traceability:
@@ -83,14 +91,31 @@ manager = TraceabilityManager()
 
 @app.route('/')
 def index():
-    return render_template('index.html', pets=manager.pets)
+    if 'username' in session:
+        username = session['username']
+        pets = user_pets.get(username, [])  # 現在のユーザーのPETリストを取得
+        return render_template('index.html', pets=pets)
+    else:
+        return redirect(url_for('login'))
 
 @app.route('/add_pet', methods=['POST'])
 def add_pet():
-    weight = request.form['weight']
-    location = request.form['location']
-    pet_id = manager.add_pet(weight, location)
-    return render_template('index.html', pets=manager.pets, message=f"{pet_id}が投函されました。")
+    if 'username' in session:
+        username = session['username']
+        weight = request.form['weight']
+        location = request.form['location']
+        pet_id = manager.add_pet(weight, location)
+        # 現在のユーザーのPETリストに追加
+        user_pets[username].append({
+            'pet_id': pet_id,
+            'weight': weight,
+            'location': location,
+            'timestamp': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        })
+        return redirect(url_for('index'))
+
+    else:
+        return "You need to log in first."
 
 @app.route('/add_trace/<trace_type>', methods=['GET', 'POST'])
 def add_trace(trace_type):
