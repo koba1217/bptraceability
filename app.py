@@ -1,6 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 import datetime
 import hashlib
+import uuid
 
 # Flask アプリの作成
 app = Flask(__name__, static_folder='static')
@@ -23,6 +24,10 @@ user_pets = {
     '紡績1': [],
     '製品化1': []
 }
+
+pet_status = {}
+
+trace_urls = []
 
 # トレーサビリティ機能
 class Traceability:
@@ -51,11 +56,11 @@ class TraceabilityManager:
 
     def generate_pet_id(self, weight, location):
         # 現在の日時を取得
-        now = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+        now = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
         # 重量と場所のデータを結合
         data = f"{now}-{weight}-{location}"
         # SHA-256ハッシュを使ってユニークなIDを生成
-        pet_id = hashlib.sha256(data.encode()).hexdigest()[:16]
+        pet_id = now + "_" + hashlib.sha256(data.encode()).hexdigest()[:16]
         return pet_id
 
     def add_pet(self, weight, location):
@@ -119,28 +124,49 @@ def add_pet():
 
 @app.route('/add_trace/<trace_type>', methods=['GET', 'POST'])
 def add_trace(trace_type):
+    if 'username' in session:
+        username = session['username']
+    else:
+        return redirect(url_for('login'))
     if request.method == 'POST':
         pet_id = request.form['pet_id']
         location = request.form['location']
         status = request.form['status']
         manager.add_trace_to_pet(pet_id, location, status, trace_type)
-        if 'username' in session:
-            username = session['username']
-            if username == 'リサイクラー1' and trace_type == 'recycler':
-                return redirect(url_for('add_trace', trace_type='recycler'))
-            elif username == '紡績1' and trace_type == 'spinning':
-                return redirect(url_for('add_trace', trace_type='spinning'))
-            elif username == '製品化1' and trace_type == 'manufacturing':
-                return redirect(url_for('add_trace', trace_type='manufacturing'))
+        if username == 'リサイクラー1' and trace_type == 'recycler':
+            if status == "出荷":
+                pet_status[pet_id] = 'Shipped from recycler'
+            return redirect(url_for('add_trace', trace_type='recycler'))
+        elif username == '紡績1' and trace_type == 'spinning':
+            if status == "出荷":
+                pet_status[pet_id] = 'Shipped from spinning'
+            return redirect(url_for('add_trace', trace_type='spinning'))
+        elif username == '製品化1' and trace_type == 'manufacturing':
+            # 製品IDのリストをセッションで保持
+            if 'product_ids' not in session:
+                session['product_ids'] = []
+            if status == "出荷":
+                pet_status[pet_id] = 'Shipped from manufacturing'
+                trace_url = url_for('trace_history', pet_id=pet_id)
+                trace_urls.append(trace_url)
+                product_id = f"{pet_id}-{uuid.uuid4().hex[:8]}"
+                session['product_ids'].append(product_id)
+                pet_ids = manager.get_pet_ids_by_trace_type('spinning', '出荷')
+                display_pet_ids = [id for id in pet_ids if pet_status.get(id) not in ['Shipped from manufacturing']]
+                return render_template('add_trace_manufacturing.html', trace_urls=trace_urls ,pet_ids=display_pet_ids, product_ids=session['product_ids'])
+            return redirect(url_for('add_trace', trace_type='manufacturing'))
         return redirect(url_for('index'))  # その他のユーザーやエラー時はホーム画面にリダイレクト
     else:
         if trace_type == 'recycler':
             pet_ids = list(manager.pets.keys())
+            display_pet_ids = [id for id in pet_ids if pet_status.get(id) not in ['Shipped from recycler','Shipped from spinning','Shipped from manufacturing']]
         elif trace_type == 'spinning':
             pet_ids = manager.get_pet_ids_by_trace_type('recycler', '出荷')
+            display_pet_ids = [id for id in pet_ids if pet_status.get(id) not in ['Shipped from spinning','Shipped from manufacturing']]
         elif trace_type == 'manufacturing':
             pet_ids = manager.get_pet_ids_by_trace_type('spinning', '出荷')
-        return render_template(f'add_trace_{trace_type}.html', pet_ids=pet_ids)
+            display_pet_ids = [id for id in pet_ids if pet_status.get(id) not in ['Shipped from manufacturing']]
+        return render_template(f'add_trace_{trace_type}.html',trace_urls=trace_urls ,pet_ids=display_pet_ids)
 
     return render_template(f'add_trace_{trace_type}.html')
 
@@ -150,6 +176,13 @@ def trace_log(pet_id):
     if trace_data:
         return render_template('trace_log.html', pet_id=pet_id, weight=trace_data['weight'], initial_location=trace_data['initial_location'], trace_log=trace_data['trace_log'])
     return render_template('trace_log.html', pet_id=pet_id, message="No trace log found for this PET.")
+
+@app.route('/trace_history/<pet_id>')
+def trace_history(pet_id):
+    trace_data = manager.get_trace_log_for_pet(pet_id)
+    if trace_data:
+        return render_template('trace_history.html', pet_id=pet_id, weight=trace_data['weight'], initial_location=trace_data['initial_location'], trace_log=trace_data['trace_log'])
+    return render_template('trace_history.html', pet_id=pet_id, message="No trace log found for this PET.")
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -175,7 +208,6 @@ def login():
             return "Invalid credentials. Please try again."
 
     return render_template('login.html')
-
 
 @app.route('/logout')
 def logout():

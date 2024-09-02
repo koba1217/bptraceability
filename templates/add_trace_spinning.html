@@ -12,6 +12,15 @@
     <h1>紡績業者画面</h1>
 
     <form action="{{ url_for('add_trace', trace_type='spinning') }}" method="POST">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <ul class="flashes">
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
         <label for="pet_id">PET ID:</label>
         <select id="pet_id" name="pet_id" required>
             {% for pet_id in pet_ids %}

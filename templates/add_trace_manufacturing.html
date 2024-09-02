@@ -12,6 +12,15 @@
     <h1>製品化業者画面</h1>
 
     <form action="{{ url_for('add_trace', trace_type='manufacturing') }}" method="POST">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <ul class="flashes">
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
         <label for="pet_id">PET ID:</label>
         <select id="pet_id" name="pet_id" required>
             {% for pet_id in pet_ids %}
@@ -29,6 +38,14 @@
         <button type="submit">入力</button>
     </form>
 
+    {% if trace_urls %}
+    <h3>製品のトレース履歴</h3>
+    <ul>
+        {% for trace_url in trace_urls %}
+            <li><p>製品ID: <br>URL:<a href="{{ trace_url }}">トレース情報</a></p></li>
+        {% endfor %}
+    </ul>
+    {% endif %}
     <!-- <a href="{{ url_for('index') }}">Back to Home</a> -->
     <br><br><a href="{{ url_for('logout') }}">Logout</a>
 </body>

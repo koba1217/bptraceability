@@ -1,0 +1,33 @@
+{% include 'header.html' %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trace Log for PET {{ pet_id }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <h1>製品情報履歴</h1>
+    
+    {% if weight %}
+        <p><strong>ペットボトルが投函された場所:</strong> {{ initial_location }}</p>
+        <h2> この製品のリサイクル履歴</h2>
+        <ul>
+            {% for trace in trace_log %}
+                <li>
+                    <strong>日付:</strong> {{ trace.timestamp }}<br>
+                    <strong>会社:</strong> {{ trace.location }}<br>
+                    <strong>ステータス:</strong> {{ trace.status }}<br>
+                    <strong>Type:</strong> {{ trace.trace_type }}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>{{ message }}</p>
+    {% endif %}
+
+    <!-- <a href="{{ url_for('index') }}">Back to Home</a> -->
+</body>
+</html>
