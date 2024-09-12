@@ -10,9 +10,10 @@
 </head>
 <body>
     <h1>製品情報履歴</h1>
-    
+
     {% if weight %}
         <p><strong>ペットボトルが投函された場所:</strong> {{ initial_location }}</p>
+        <p><strong>ペットボトルが投函された日付:</strong> {{ initial_time }}</p>
         <h2> この製品のリサイクル履歴</h2>
         <ul>
             {% for trace in trace_log %}

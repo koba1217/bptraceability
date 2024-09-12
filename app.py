@@ -80,6 +80,7 @@ class TraceabilityManager:
             return {
                 'weight': trace_data.weight,
                 'initial_location': trace_data.initial_location,
+                'initial_time':trace_data.creation_timestamp,
                 'trace_log': trace_data.get_trace_log()
             }
         return None
@@ -142,18 +143,14 @@ def add_trace(trace_type):
                 pet_status[pet_id] = 'Shipped from spinning'
             return redirect(url_for('add_trace', trace_type='spinning'))
         elif username == '製品化1' and trace_type == 'manufacturing':
-            # 製品IDのリストをセッションで保持
-            if 'product_ids' not in session:
-                session['product_ids'] = []
             if status == "出荷":
                 pet_status[pet_id] = 'Shipped from manufacturing'
                 trace_url = url_for('trace_history', pet_id=pet_id)
-                trace_urls.append(trace_url)
                 product_id = f"{pet_id}-{uuid.uuid4().hex[:8]}"
-                session['product_ids'].append(product_id)
+                trace_urls.append({'product_id': product_id, 'trace_url': trace_url})
                 pet_ids = manager.get_pet_ids_by_trace_type('spinning', '出荷')
                 display_pet_ids = [id for id in pet_ids if pet_status.get(id) not in ['Shipped from manufacturing']]
-                return render_template('add_trace_manufacturing.html', trace_urls=trace_urls ,pet_ids=display_pet_ids, product_ids=session['product_ids'])
+                return render_template('add_trace_manufacturing.html', trace_urls=trace_urls ,pet_ids=display_pet_ids)
             return redirect(url_for('add_trace', trace_type='manufacturing'))
         return redirect(url_for('index'))  # その他のユーザーやエラー時はホーム画面にリダイレクト
     else:
@@ -181,7 +178,7 @@ def trace_log(pet_id):
 def trace_history(pet_id):
     trace_data = manager.get_trace_log_for_pet(pet_id)
     if trace_data:
-        return render_template('trace_history.html', pet_id=pet_id, weight=trace_data['weight'], initial_location=trace_data['initial_location'], trace_log=trace_data['trace_log'])
+        return render_template('trace_history.html', pet_id=pet_id, weight=trace_data['weight'], initial_location=trace_data['initial_location'], initial_time=trace_data['initial_time'], trace_log=trace_data['trace_log'])
     return render_template('trace_history.html', pet_id=pet_id, message="No trace log found for this PET.")
 
 @app.route('/login', methods=['GET', 'POST'])

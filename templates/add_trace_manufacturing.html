@@ -42,7 +42,7 @@
     <h3>製品のトレース履歴</h3>
     <ul>
         {% for trace_url in trace_urls %}
-            <li><p>製品ID: <br>URL:<a href="{{ trace_url }}">トレース情報</a></p></li>
+            <li><p>製品ID:{{ trace_url.product_id }} <br>URL:<a href="{{ trace_url.trace_url }}">トレース情報</a></p></li>
         {% endfor %}
     </ul>
     {% endif %}
