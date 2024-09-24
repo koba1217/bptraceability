@@ -16,12 +16,12 @@
         <p><strong>ペットボトルが投函された日付:</strong> {{ initial_time }}</p>
         <h2> この製品のリサイクル履歴</h2>
         <ul>
-            {% for trace in trace_log %}
+            {% for trace in trace_logs %}
                 <li>
-                    <strong>日付:</strong> {{ trace.timestamp }}<br>
-                    <strong>会社:</strong> {{ trace.location }}<br>
-                    <strong>ステータス:</strong> {{ trace.status }}<br>
-                    <strong>Type:</strong> {{ trace.trace_type }}
+                    <strong>日付:</strong> {{ trace[3] }}<br>
+                    <strong>会社:</strong> {{ trace[4] }}<br>
+                    <strong>ステータス:</strong> {{ trace[5] }}<br>
+                    <strong>Type:</strong> {{ trace[6] }}<br>
                 </li>
             {% endfor %}
         </ul>

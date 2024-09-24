@@ -10,7 +10,7 @@
 </head>
 <body>
     <h1> リサイクル履歴詳細</h1>
-    
+
     {% if weight %}
         <p><strong>重量:</strong> {{ weight }}</p>
         <p><strong>投函場所:</strong> {{ initial_location }}</p>
@@ -24,7 +24,7 @@
                     <strong>Type:</strong> {{ trace.trace_type }}
                 </li>
             {% endfor %}
-        </ul>
+        </ul>{{data}}
     {% else %}
         <p>{{ message }}</p>
     {% endif %}

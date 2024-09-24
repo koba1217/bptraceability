@@ -2,10 +2,24 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 import datetime
 import hashlib
 import uuid
+import psycopg2
 
 # Flask アプリの作成
 app = Flask(__name__, static_folder='static')
 app.secret_key = 'your_secret_key_here'  # シークレットキーを設定
+
+# PostgreSQL接続設定
+def connect_db():
+    conn = psycopg2.connect(
+        dbname="postgres",
+        user="postgres",
+        password="kobayu4869",
+        host="localhost",
+        port="5432"
+    )
+    # エンコーディングをUTF-8に設定
+    conn.set_client_encoding('UTF8')
+    return conn
 
 # ハードコードされたユーザー情報
 users = {
@@ -31,10 +45,11 @@ trace_urls = []
 
 # トレーサビリティ機能
 class Traceability:
-    def __init__(self, pet_id, weight, location):
+    def __init__(self, pet_id, weight, location, username):
         self.pet_id = pet_id
         self.weight = weight
         self.initial_location = location
+        self.user_name = username
         self.creation_timestamp = datetime.datetime.now()
         self.trace_log = []
 
@@ -63,9 +78,9 @@ class TraceabilityManager:
         pet_id = now + "_" + hashlib.sha256(data.encode()).hexdigest()[:16]
         return pet_id
 
-    def add_pet(self, weight, location):
+    def add_pet(self, weight, location, username):
         pet_id = self.generate_pet_id(weight, location)
-        self.pets[pet_id] = Traceability(pet_id, weight, location)
+        self.pets[pet_id] = Traceability(pet_id, weight, location, username)
         return pet_id
 
     def add_trace_to_pet(self, pet_id, location, status, trace_type):
@@ -110,7 +125,7 @@ def add_pet():
         username = session['username']
         weight = request.form['weight']
         location = request.form['location']
-        pet_id = manager.add_pet(weight, location)
+        pet_id = manager.add_pet(weight, location, username)
         # 現在のユーザーのPETリストに追加
         user_pets[username].append({
             'pet_id': pet_id,
@@ -133,6 +148,7 @@ def add_trace(trace_type):
         pet_id = request.form['pet_id']
         location = request.form['location']
         status = request.form['status']
+        manufacture_timestamp = datetime.datetime.now()
         manager.add_trace_to_pet(pet_id, location, status, trace_type)
         if username == 'リサイクラー1' and trace_type == 'recycler':
             if status == "出荷":
@@ -148,6 +164,24 @@ def add_trace(trace_type):
                 trace_url = url_for('trace_history', pet_id=pet_id)
                 product_id = f"{pet_id}-{uuid.uuid4().hex[:8]}"
                 trace_urls.append({'product_id': product_id, 'trace_url': trace_url})
+                trace_data = manager.get_trace_log_for_pet(pet_id)
+                trace_logs = trace_data['trace_log']
+
+                 # PostgreSQLに保存
+                conn = connect_db()
+                cursor = conn.cursor()
+
+                for trace in trace_logs:
+                    insert_query = """
+                    INSERT INTO bp_traceability (pet_id, product_id, date, location, status, type)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    """
+                    cursor.execute(insert_query, (pet_id, product_id, trace['timestamp'], trace['location'], trace['status'], trace['trace_type']))
+
+                conn.commit()
+                cursor.close()
+                conn.close()
+
                 pet_ids = manager.get_pet_ids_by_trace_type('spinning', '出荷')
                 display_pet_ids = [id for id in pet_ids if pet_status.get(id) not in ['Shipped from manufacturing']]
                 return render_template('add_trace_manufacturing.html', trace_urls=trace_urls ,pet_ids=display_pet_ids)
@@ -171,15 +205,30 @@ def add_trace(trace_type):
 def trace_log(pet_id):
     trace_data = manager.get_trace_log_for_pet(pet_id)
     if trace_data:
-        return render_template('trace_log.html', pet_id=pet_id, weight=trace_data['weight'], initial_location=trace_data['initial_location'], trace_log=trace_data['trace_log'])
+        return render_template('trace_log.html', pet_id=pet_id, weight=trace_data['weight'], initial_location=trace_data['initial_location'], trace_log=trace_data['trace_log'], data=trace_data)
     return render_template('trace_log.html', pet_id=pet_id, message="No trace log found for this PET.")
+
+#@app.route('/trace_history/<pet_id>')
+#def trace_history(pet_id):
+    #trace_data = manager.get_trace_log_for_pet(pet_id)
+    #if trace_data:
+        #return render_template('trace_history.html', pet_id=pet_id, weight=trace_data['weight'], initial_location=trace_data['initial_location'], initial_time=trace_data['initial_time'], trace_log=trace_data['trace_log'])
+    #return render_template('trace_history.html', pet_id=pet_id, message="No trace log found for this PET.")
 
 @app.route('/trace_history/<pet_id>')
 def trace_history(pet_id):
     trace_data = manager.get_trace_log_for_pet(pet_id)
-    if trace_data:
-        return render_template('trace_history.html', pet_id=pet_id, weight=trace_data['weight'], initial_location=trace_data['initial_location'], initial_time=trace_data['initial_time'], trace_log=trace_data['trace_log'])
-    return render_template('trace_history.html', pet_id=pet_id, message="No trace log found for this PET.")
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    # pet_idに対応するトレース履歴を取得
+    cursor.execute("SELECT * FROM bp_traceability WHERE pet_id = %s", (pet_id,))
+    trace_logs = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return render_template('trace_history.html', pet_id=pet_id, weight=trace_data['weight'], initial_location=trace_data['initial_location'], initial_time=trace_data['initial_time'], trace_logs=trace_logs)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
