@@ -23,8 +23,10 @@
         {% endwith %}
         <label for="pet_id">PET ID:</label>
         <select id="pet_id" name="pet_id" required>
-            {% for pet_id in pet_ids %}
-                <option value="{{ pet_id }}">{{ pet_id }}</option>
+            {% for pet_id_tuple in pet_ids %}
+                {% for pet_id in pet_id_tuple %}
+                    <option value="{{ pet_id }}">{{ pet_id }}</option>
+                {% endfor %}
             {% endfor %}
         </select><br><br>
         <label for="location">会社:</label>

@@ -30,15 +30,6 @@ users = {
     "製品化1": "pass"
 }
 
-# ユーザーごとのPETデータを保持する
-user_pets = {
-    'user1': [],
-    'user2': [],
-    'リサイクラー1': [],
-    '紡績1': [],
-    '製品化1': []
-}
-
 pet_status = {}
 
 trace_urls = []
@@ -114,8 +105,16 @@ manager = TraceabilityManager()
 def index():
     if 'username' in session:
         username = session['username']
-        pets = user_pets.get(username, [])  # 現在のユーザーのPETリストを取得
-        return render_template('index.html', pets=pets)
+
+        # pet_idに対応するトレース履歴を取得
+        conn = connect_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM bp_initial_traceability WHERE username = %s", (username,))
+        initial_trace = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        return render_template('index.html', pets=initial_trace)
     else:
         return redirect(url_for('login'))
 
@@ -126,13 +125,19 @@ def add_pet():
         weight = request.form['weight']
         location = request.form['location']
         pet_id = manager.add_pet(weight, location, username)
-        # 現在のユーザーのPETリストに追加
-        user_pets[username].append({
-            'pet_id': pet_id,
-            'weight': weight,
-            'location': location,
-            'timestamp': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        })
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # PostgreSQLに保存
+        conn = connect_db()
+        cursor = conn.cursor()
+        insert_query = """
+        INSERT INTO bp_initial_traceability (pet_id, username, initial_weight, initial_location, initial_date)
+        VALUES (%s, %s, %s, %s, %s)
+        """
+        cursor.execute(insert_query, (pet_id, username, weight, location, timestamp))
+        conn.commit()
+        cursor.close()
+        conn.close()
+
         return redirect(url_for('index'))
 
     else:
@@ -148,8 +153,26 @@ def add_trace(trace_type):
         pet_id = request.form['pet_id']
         location = request.form['location']
         status = request.form['status']
-        manufacture_timestamp = datetime.datetime.now()
+        action_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         manager.add_trace_to_pet(pet_id, location, status, trace_type)
+        if trace_type == 'manufacturing':
+            product_id = f"{pet_id}-{uuid.uuid4().hex[:8]}"
+
+        # PostgreSQLに保存
+        conn = connect_db()
+        cursor = conn.cursor()
+        insert_query = """
+        INSERT INTO bp_traceability (pet_id, product_id, date, location, status, type)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        if trace_type == 'manufacturing':
+            cursor.execute(insert_query, (pet_id, product_id, action_time, location, status, trace_type))
+        else:
+            cursor.execute(insert_query, (pet_id, 0, action_time, location, status, trace_type))
+        conn.commit()
+        cursor.close()
+        conn.close()
+
         if username == 'リサイクラー1' and trace_type == 'recycler':
             if status == "出荷":
                 pet_status[pet_id] = 'Shipped from recycler'
@@ -162,50 +185,58 @@ def add_trace(trace_type):
             if status == "出荷":
                 pet_status[pet_id] = 'Shipped from manufacturing'
                 trace_url = url_for('trace_history', pet_id=pet_id)
-                product_id = f"{pet_id}-{uuid.uuid4().hex[:8]}"
                 trace_urls.append({'product_id': product_id, 'trace_url': trace_url})
-                trace_data = manager.get_trace_log_for_pet(pet_id)
-                trace_logs = trace_data['trace_log']
-
-                 # PostgreSQLに保存
-                conn = connect_db()
-                cursor = conn.cursor()
-
-                for trace in trace_logs:
-                    insert_query = """
-                    INSERT INTO bp_traceability (pet_id, product_id, date, location, status, type)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                    """
-                    cursor.execute(insert_query, (pet_id, product_id, trace['timestamp'], trace['location'], trace['status'], trace['trace_type']))
-
-                conn.commit()
-                cursor.close()
-                conn.close()
-
                 pet_ids = manager.get_pet_ids_by_trace_type('spinning', '出荷')
                 display_pet_ids = [id for id in pet_ids if pet_status.get(id) not in ['Shipped from manufacturing']]
                 return render_template('add_trace_manufacturing.html', trace_urls=trace_urls ,pet_ids=display_pet_ids)
             return redirect(url_for('add_trace', trace_type='manufacturing'))
         return redirect(url_for('index'))  # その他のユーザーやエラー時はホーム画面にリダイレクト
     else:
+        conn = connect_db()
+        cursor = conn.cursor()
         if trace_type == 'recycler':
-            pet_ids = list(manager.pets.keys())
-            display_pet_ids = [id for id in pet_ids if pet_status.get(id) not in ['Shipped from recycler','Shipped from spinning','Shipped from manufacturing']]
+            cursor.execute("SELECT pet_id FROM bp_initial_traceability")
+            initial_trace_pet_id = cursor.fetchall()
+            cursor.execute("SELECT pet_id FROM bp_traceability WHERE type =%s and status =%s",('recycler','出荷'))
+            Shipped_from_recycler = cursor.fetchall()
+            display_pet_ids = list(set(initial_trace_pet_id)-set(Shipped_from_recycler))
+            #pet_ids = list(manager.pets.keys())
+            #display_pet_ids = [id for id in pet_ids if pet_status.get(id) not in ['Shipped from recycler','Shipped from spinning','Shipped from manufacturing']]
         elif trace_type == 'spinning':
-            pet_ids = manager.get_pet_ids_by_trace_type('recycler', '出荷')
-            display_pet_ids = [id for id in pet_ids if pet_status.get(id) not in ['Shipped from spinning','Shipped from manufacturing']]
+            cursor.execute("SELECT pet_id FROM bp_traceability WHERE type =%s and status =%s",('recycler','出荷'))
+            Shipped_from_recycler = cursor.fetchall()
+            cursor.execute("SELECT pet_id FROM bp_traceability WHERE type =%s and status =%s",('spinning','出荷'))
+            Shipped_from_spinning = cursor.fetchall()
+            display_pet_ids = list(set(Shipped_from_recycler)-set(Shipped_from_spinning))
+            #pet_ids = manager.get_pet_ids_by_trace_type('recycler', '出荷')
+            #display_pet_ids = [id for id in pet_ids if pet_status.get(id) not in ['Shipped from spinning','Shipped from manufacturing']]
         elif trace_type == 'manufacturing':
-            pet_ids = manager.get_pet_ids_by_trace_type('spinning', '出荷')
-            display_pet_ids = [id for id in pet_ids if pet_status.get(id) not in ['Shipped from manufacturing']]
+            cursor.execute("SELECT pet_id FROM bp_traceability WHERE type =%s and status =%s",('spinning','出荷'))
+            Shipped_from_spinning = cursor.fetchall()
+            cursor.execute("SELECT pet_id FROM bp_traceability WHERE type =%s and status =%s",('manufacturing','出荷'))
+            Shipped_from_manufacturing = cursor.fetchall()
+            display_pet_ids = list(set(Shipped_from_spinning)-set(Shipped_from_manufacturing))
+            #pet_ids = manager.get_pet_ids_by_trace_type('spinning', '出荷')
+            #display_pet_ids = [id for id in pet_ids if pet_status.get(id) not in ['Shipped from manufacturing']]
+        cursor.close()
+        conn.close()
         return render_template(f'add_trace_{trace_type}.html',trace_urls=trace_urls ,pet_ids=display_pet_ids)
 
     return render_template(f'add_trace_{trace_type}.html')
 
 @app.route('/trace_log/<pet_id>')
 def trace_log(pet_id):
-    trace_data = manager.get_trace_log_for_pet(pet_id)
-    if trace_data:
-        return render_template('trace_log.html', pet_id=pet_id, weight=trace_data['weight'], initial_location=trace_data['initial_location'], trace_log=trace_data['trace_log'], data=trace_data)
+    # pet_idに対応するトレース履歴を取得
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM bp_traceability WHERE pet_id = %s", (pet_id,))
+    trace_logs = cursor.fetchall()
+    cursor.execute("SELECT * FROM bp_initial_traceability WHERE pet_id = %s", (pet_id,))
+    initial_trace = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    if initial_trace:
+        return render_template('trace_log.html', pet_id=pet_id, initial_log=initial_trace, trace_logs=trace_logs)
     return render_template('trace_log.html', pet_id=pet_id, message="No trace log found for this PET.")
 
 #@app.route('/trace_history/<pet_id>')
@@ -217,18 +248,17 @@ def trace_log(pet_id):
 
 @app.route('/trace_history/<pet_id>')
 def trace_history(pet_id):
-    trace_data = manager.get_trace_log_for_pet(pet_id)
+    # pet_idに対応するトレース履歴を取得
     conn = connect_db()
     cursor = conn.cursor()
-
-    # pet_idに対応するトレース履歴を取得
     cursor.execute("SELECT * FROM bp_traceability WHERE pet_id = %s", (pet_id,))
     trace_logs = cursor.fetchall()
-
+    cursor.execute("SELECT * FROM bp_initial_traceability WHERE pet_id = %s", (pet_id,))
+    initial_trace = cursor.fetchall()
     cursor.close()
     conn.close()
 
-    return render_template('trace_history.html', pet_id=pet_id, weight=trace_data['weight'], initial_location=trace_data['initial_location'], initial_time=trace_data['initial_time'], trace_logs=trace_logs)
+    return render_template('trace_history.html', pet_id=pet_id, initial_log=initial_trace, trace_logs=trace_logs)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():

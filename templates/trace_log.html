@@ -11,20 +11,22 @@
 <body>
     <h1> リサイクル履歴詳細</h1>
 
-    {% if weight %}
-        <p><strong>重量:</strong> {{ weight }}</p>
-        <p><strong>投函場所:</strong> {{ initial_location }}</p>
+    {% if initial_log %}
+        {% for initial_data in initial_log %}
+            <p><strong>重量:</strong> {{ initial_data[3] }}</p>
+            <p><strong>投函場所:</strong> {{ initial_data[4] }}</p>
+        {% endfor %}
         <h2> PET ID {{ pet_id }} のトレースログ</h2>
         <ul>
-            {% for trace in trace_log %}
+            {% for trace in trace_logs %}
                 <li>
-                    <strong>日付:</strong> {{ trace.timestamp }}<br>
-                    <strong>会社:</strong> {{ trace.location }}<br>
-                    <strong>ステータス:</strong> {{ trace.status }}<br>
-                    <strong>Type:</strong> {{ trace.trace_type }}
+                    <strong>日付:</strong> {{ trace[3]}}<br>
+                    <strong>会社:</strong> {{ trace[4] }}<br>
+                    <strong>ステータス:</strong> {{ trace[5] }}<br>
+                    <strong>Type:</strong> {{ trace[6] }}
                 </li>
             {% endfor %}
-        </ul>{{data}}
+        </ul>
     {% else %}
         <p>{{ message }}</p>
     {% endif %}

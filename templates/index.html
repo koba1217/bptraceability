@@ -38,11 +38,11 @@
     <ul>
         {% for pet in pets %}
         <li>
-            <strong>ID:</strong> {{ pet['pet_id'] }}<br>
-            <strong>本数:</strong> {{ pet['weight'] }}<br>
-            <strong>投函場所:</strong> {{ pet['location'] }}<br>
-            <strong>日時:</strong> {{ pet['timestamp'] }}<br>
-            <a href="{{ url_for('trace_log', pet_id=pet['pet_id'] ) }}">リサイクル履歴の詳細を見る</a>
+            <strong>ID:</strong> {{ pet[0] }}<br>
+            <strong>本数:</strong> {{ pet[2] }}<br>
+            <strong>投函場所:</strong> {{ pet[3] }}<br>
+            <strong>日時:</strong> {{ pet[4] }}<br>
+            <a href="{{ url_for('trace_log', pet_id=pet[0] ) }}">リサイクル履歴の詳細を見る</a>
         </li>
         {% endfor %}
     </ul>

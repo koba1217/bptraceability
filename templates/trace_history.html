@@ -10,25 +10,22 @@
 </head>
 <body>
     <h1>製品情報履歴</h1>
+    {% for initial_data in initial_log %}
+        <p><strong>ペットボトルが投函された場所:</strong> {{ initial_data[3] }}</p>
+        <p><strong>ペットボトルが投函された日付:</strong> {{ initial_data[4] }}</p>
+    {% endfor %}
+    <h2> この製品のリサイクル履歴</h2>
+    <ul>
+        {% for trace in trace_logs %}
+            <li>
+                <strong>日付:</strong> {{ trace[3] }}<br>
+                <strong>会社:</strong> {{ trace[4] }}<br>
+                <strong>ステータス:</strong> {{ trace[5] }}<br>
+                <strong>Type:</strong> {{ trace[6] }}<br>
+            </li>
+        {% endfor %}
+    </ul>
 
-    {% if weight %}
-        <p><strong>ペットボトルが投函された場所:</strong> {{ initial_location }}</p>
-        <p><strong>ペットボトルが投函された日付:</strong> {{ initial_time }}</p>
-        <h2> この製品のリサイクル履歴</h2>
-        <ul>
-            {% for trace in trace_logs %}
-                <li>
-                    <strong>日付:</strong> {{ trace[3] }}<br>
-                    <strong>会社:</strong> {{ trace[4] }}<br>
-                    <strong>ステータス:</strong> {{ trace[5] }}<br>
-                    <strong>Type:</strong> {{ trace[6] }}<br>
-                </li>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <p>{{ message }}</p>
-    {% endif %}
-
-    <!-- <a href="{{ url_for('index') }}">Back to Home</a> -->
+    <a href="{{ url_for('add_trace', trace_type='manufacturing') }}">Back to Home</a>
 </body>
 </html>
